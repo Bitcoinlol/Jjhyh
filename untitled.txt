@@ -1616,7 +1616,7 @@ skin_changer_module:create_textbox({
     end
 })
 
-skin_changer_module:create_module({
+skin_changer_module:create_checkbox({
     title = "Load Sword",
     flag = "Load_Sword_Button",
     callback = function()
@@ -1634,7 +1634,7 @@ skin_changer_module:create_module({
     end
 })
 
-skin_changer_module:create_module({
+skin_changer_module:create_checkbox({
     title = "Refresh Sword",
     flag = "Refresh_Sword_Button",
     callback = function()
@@ -1931,4 +1931,3 @@ end)
 
 -- Load the UI
 main:load()
-
