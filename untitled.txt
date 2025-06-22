@@ -92,7 +92,7 @@ end)
 -- Utility functions (unchanged)
 local function BlockMovement(actionName, inputState, inputObject)
     return Enum.ContextActionResult.Sink
-end
+}
 
 local function updateNavigation(guiObject)
     GuiService.SelectedObject = guiObject
@@ -1593,7 +1593,7 @@ local skin_changer_module = skin_changer_tab:create_module({
     title = "Weapon Skin",
     flag = "Weapon_Skin",
     description = "Change your equipped weapon's appearance",
-    section = "left", -- You can choose "left" or "right"
+    section = "left",
     callback = function(value)
         -- The skin changer logic doesn't have an overall enable/disable toggle
         -- through this specific callback, as it's controlled by the buttons.
@@ -1622,12 +1622,13 @@ skin_changer_module:create_checkbox({
     callback = function()
         local swordName = currentSwordTextbox and currentSwordTextbox.text or ""
         if swordName ~= "" then
+            print("[DEBUG] Attempting to load sword from textbox: " .. swordName) -- DEBUG
             getgenv().config.enabled = true
             getgenv().config.model = swordName
             getgenv().config.anim = swordName
             getgenv().config.fx = swordName
             getgenv().updateSword()
-            warn("Attempting to load sword: " .. swordName)
+            warn("Attempting to load sword: " .. swordName) -- Original warn
         else
             warn("Please enter a sword name into the textbox.")
         end
@@ -1638,14 +1639,16 @@ skin_changer_module:create_checkbox({
     title = "Refresh Sword",
     flag = "Refresh_Sword_Button",
     callback = function()
-        getgenv().config.enabled = false
-        local currentEquippedSword = LocalPlayer.Character:GetAttribute("CurrentlyEquippedSword")
+        print("[DEBUG] Refreshing sword triggered.") -- DEBUG
+        getgenv().config.enabled = false -- Temporarily disable to force re-equip original
+        local currentEquippedSword = LocalPlayer:GetAttribute("CurrentlyEquippedSword") -- Use LocalPlayer directly for attribute
         if currentEquippedSword then
+            print("[DEBUG] Currently equipped sword found: " .. currentEquippedSword) -- DEBUG
             getgenv().config.model = currentEquippedSword
             getgenv().config.anim = currentEquippedSword
             getgenv().config.fx = currentEquippedSword
             getgenv().updateSword()
-            warn("Refreshing sword to: " .. currentEquippedSword)
+            warn("Refreshing sword to: " .. currentEquippedSword) -- Original warn
         else
             warn("Could not determine currently equipped sword to refresh.")
         end
@@ -1659,7 +1662,7 @@ getgenv().config = getgenv().config or {
     anim = "Flowing Katana",
     fx = "Flowing Katana"
 }
-print = function(...) end -- Keep print disabled as per original code
+-- print = function(...) end -- REMOVE OR COMMENT THIS LINE TEMPORARILY TO SEE DEBUG PRINTS
 local p = game:GetService("Players").LocalPlayer
 local rs = game:GetService("ReplicatedStorage")
 local swords = require(rs:WaitForChild("Shared", 9e9):WaitForChild("ReplicatedInstances", 9e9):WaitForChild("Swords", 9e9))
@@ -1667,34 +1670,42 @@ local ctrl, playFx, lastParry = nil, nil, 0
 
 local function getSlash(name)
     local s = swords:GetSword(name)
+    print("[DEBUG] getSlash called for:", name, " - Result:", s and s.SlashName or "nil") -- DEBUG
     return (s and s.SlashName) or "SlashEffect"
 end
 getgenv().config.slash = getSlash(getgenv().config.fx)
+
 local function setSword()
+    print("[DEBUG] setSword called. getgenv().config.enabled:", getgenv().config.enabled) -- DEBUG
     if not getgenv().config.enabled then
         -- If disabled, try to re-equip the player's original sword
         local currentEquippedSword = p:GetAttribute("CurrentlyEquippedSword")
+        print("[DEBUG] Skin changer disabled. Attempting to re-equip original:", currentEquippedSword) -- DEBUG
         if currentEquippedSword then
             setupvalue(rawget(swords, "EquipSwordTo"), 2, false)
             swords:EquipSwordTo(p.Character, currentEquippedSword)
             -- Attempt to reset anim/fx if possible, or just use defaults
             local swordData = swords:GetSword(currentEquippedSword)
             if swordData then
-                ctrl:SetSword(swordData.AnimationType)
+                print("[DEBUG] Re-equipping original sword anim/fx:", swordData.AnimationType, swordData.Name) -- DEBUG
+                if ctrl then ctrl:SetSword(swordData.AnimationType) end
                 getgenv().config.slash = getSlash(swordData.Name)
             else
-                ctrl:SetSword("Flowing Katana") -- Fallback if data not found
+                print("[DEBUG] Could not find sword data for original sword. Falling back to Flowing Katana.") -- DEBUG
+                if ctrl then ctrl:SetSword("Flowing Katana") end -- Fallback if data not found
                 getgenv().config.slash = getSlash("Flowing Katana")
             end
         end
         return
     end
+    print("[DEBUG] Skin changer enabled. Attempting to equip custom sword:", getgenv().config.model) -- DEBUG
     setupvalue(rawget(swords, "EquipSwordTo"), 2, false)
     swords:EquipSwordTo(p.Character, getgenv().config.model)
-    ctrl:SetSword(getgenv().config.anim)
+    if ctrl then ctrl:SetSword(getgenv().config.anim) end
 end
 
 getgenv().updateSword = function()
+    print("[DEBUG] updateSword called.") -- DEBUG
     getgenv().config.slash = getSlash(getgenv().config.fx)
     setSword()
 end
@@ -1703,7 +1714,11 @@ while task.wait() and not ctrl do
     for _, v in getconnections(rs.Remotes.FireSwordInfo.OnClientEvent) do
         if v.Function and islclosure(v.Function) then
             local u = getupvalues(v.Function)
-            if #u == 1 and type(u[1]) == "table" then ctrl = u[1] break end
+            if #u == 1 and type(u[1]) == "table" then
+                ctrl = u[1]
+                print("[DEBUG] Found ctrl:", tostring(ctrl)) -- DEBUG
+                break
+            end
         end
     end
 end
@@ -1714,6 +1729,7 @@ while task.wait() and not parryConnA do
         if v.Function and getinfo(v.Function).name == "parrySuccessAll" then
             parryConnA, playFx = v, v.Function
             v:Disable()
+            print("[DEBUG] Found and disabled parryConnA.") -- DEBUG
             break
         end
     end
@@ -1723,6 +1739,7 @@ while task.wait() and not parryConnB do
         if v.Function and getinfo(v.Function).name == "parrySuccessAll" then
             parryConnB = v
             v:Disable()
+            print("[DEBUG] Found and disabled parryConnB.") -- DEBUG
             break
         end
     end
@@ -1734,6 +1751,7 @@ rs.Remotes.ParrySuccessAll.OnClientEvent:Connect(function(...)
     if tostring(a[4]) ~= p.Name then
         lastParry = tick()
     elseif getgenv().config.enabled then
+        print("[DEBUG] Applying custom slash and fx in ParrySuccessAll:", getgenv().config.slash, getgenv().config.fx) -- DEBUG
         a[1], a[3] = getgenv().config.slash, getgenv().config.fx
     end
     return playFx(unpack(a))
@@ -1741,32 +1759,40 @@ end)
 
 task.spawn(function()
     while task.wait(1) do
+        local c = p.Character or p.CharacterAdded:Wait()
         if getgenv().config.enabled then
-            local c = p.Character or p.CharacterAdded:Wait()
+            print("[DEBUG] Checking custom sword state. Current model:", p:GetAttribute("CurrentlyEquippedSword"), "Desired model:", getgenv().config.model) -- DEBUG
             if p:GetAttribute("CurrentlyEquippedSword") ~= getgenv().config.model or not c:FindFirstChild(getgenv().config.model) then
+                print("[DEBUG] Custom sword not equipped or found. Re-equipping.") -- DEBUG
                 setSword()
             end
             for _, m in pairs(c:GetChildren()) do
-                if m:IsA("Model") and m.Name ~= getgenv().config.model then m:Destroy() end
+                if m:IsA("Model") and m.Name ~= getgenv().config.model and m.Name ~= "HumanoidRootPart" and m.Name ~= "Head" and m.Name ~= "Torso" and m.Name ~= "Right Arm" and m.Name ~= "Left Arm" and m.Name ~= "Right Leg" and m.Name ~= "Left Leg" then -- Exclude common character body parts
+                    print("[DEBUG] Destroying unwanted model:", m.Name) -- DEBUG
+                    m:Destroy()
+                end
                 task.wait()
             end
         else
             -- If disabled, ensure original sword is re-equipped and other models are removed
-            local c = p.Character or p.CharacterAdded:Wait()
             local currentEquippedSword = p:GetAttribute("CurrentlyEquippedSword")
+            print("[DEBUG] Skin changer disabled. Ensuring original sword is equipped. Current:", currentEquippedSword) -- DEBUG
             if currentEquippedSword and (p:GetAttribute("CurrentlyEquippedSword") ~= currentEquippedSword or not c:FindFirstChild(currentEquippedSword)) then
+                print("[DEBUG] Original sword not equipped or found. Re-equipping original.") -- DEBUG
                 setupvalue(rawget(swords, "EquipSwordTo"), 2, false)
                 swords:EquipSwordTo(c, currentEquippedSword)
                 -- Attempt to set animation and effects to match the original sword
                 local swordData = swords:GetSword(currentEquippedSword)
                 if ctrl and swordData then
+                    print("[DEBUG] Setting anim/fx for original sword:", swordData.AnimationType, swordData.Name) -- DEBUG
                     ctrl:SetSword(swordData.AnimationType)
                     getgenv().config.slash = getSlash(swordData.Name)
                 end
             end
             for _, m in pairs(c:GetChildren()) do
                 -- Destroy any lingering custom models if skin changer is off
-                if m:IsA("Model") and m.Name ~= currentEquippedSword and m.Name ~= "HumanoidRootPart" and m.Name ~= "Head" and m.Name ~= "Torso" then -- Add other character parts to exclude from deletion
+                if m:IsA("Model") and m.Name ~= currentEquippedSword and m.Name ~= "HumanoidRootPart" and m.Name ~= "Head" and m.Name ~= "Torso" and m.Name ~= "Right Arm" and m.Name ~= "Left Arm" and m.Name ~= "Right Leg" and m.Name ~= "Left Leg" then -- Add other character parts to exclude from deletion
+                    print("[DEBUG] Destroying lingering custom model after disable:", m.Name) -- DEBUG
                     m:Destroy()
                 end
                 task.wait()
@@ -1774,7 +1800,7 @@ task.spawn(function()
         end
     end
 end)
-print("Velocity Skin changer")
+print("Velocity Skin changer Initialized.") -- Final confirmation
 
 -- Connections and Events (unchanged except where noted)
 ReplicatedStorage.Remotes.InfinityBall.OnClientEvent:Connect(function(a, b)
