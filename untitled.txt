@@ -1616,7 +1616,7 @@ skin_changer_module:create_textbox({
     end
 })
 
-skin_changer_module:create_button({
+skin_changer_module:create_module({
     title = "Load Sword",
     flag = "Load_Sword_Button",
     callback = function()
@@ -1634,7 +1634,7 @@ skin_changer_module:create_button({
     end
 })
 
-skin_changer_module:create_button({
+skin_changer_module:create_module({
     title = "Refresh Sword",
     flag = "Refresh_Sword_Button",
     callback = function()
